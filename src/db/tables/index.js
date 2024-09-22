@@ -1,58 +1,68 @@
-import db from '../index.js';
+import pool from '../index.js';
 
 const createTables = async () => {
+    const client = await pool.connect();
+    
     try {
-        const connection = await db.getConnection();
+        await client.query('BEGIN');
 
-        const user = `CREATE TABLE IF NOT EXISTS user (
-            id VARCHAR(255) PRIMARY KEY,
-            username VARCHAR(255) UNIQUE,
-            mail VARCHAR(255) UNIQUE,
-            password VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )`;
+        const user = `
+            CREATE TABLE IF NOT EXISTS "user" (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                username STRING UNIQUE,
+                mail STRING UNIQUE,
+                password STRING,
+                created_at TIMESTAMP DEFAULT current_timestamp(),
+                updated_at TIMESTAMP DEFAULT current_timestamp()
+            )`;
 
-        const userNotificationInfo = `CREATE TABLE IF NOT EXISTS userNotificationInfo (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id VARCHAR(255),
-            telegram BIGINT,
-            email VARCHAR(255),
-            phone_no VARCHAR(255),
-            instagram VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES user(id)
-        )`;
+        const userNotificationInfo = `
+            CREATE TABLE IF NOT EXISTS userNotificationInfo (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID,
+                telegram INT8,
+                email STRING,
+                phone_no STRING,
+                instagram STRING,
+                created_at TIMESTAMP DEFAULT current_timestamp(),
+                updated_at TIMESTAMP DEFAULT current_timestamp(),
+                FOREIGN KEY (user_id) REFERENCES "user"(id)
+            )`;
 
-        const notificationData = `CREATE TABLE IF NOT EXISTS notificationData (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id VARCHAR(255),
-            telegram BOOLEAN NOT NULL,
-            email BOOLEAN NOT NULL,
-            phone_no BOOLEAN NOT NULL,
-            instagram BOOLEAN NOT NULL,
-            message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES user(id)
-        )`;
+        const notificationData = `
+            CREATE TABLE IF NOT EXISTS notificationData (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID,
+                telegram BOOLEAN NOT NULL,
+                email BOOLEAN NOT NULL,
+                phone_no BOOLEAN NOT NULL,
+                instagram BOOLEAN NOT NULL,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT current_timestamp(),
+                updated_at TIMESTAMP DEFAULT current_timestamp(),
+                FOREIGN KEY (user_id) REFERENCES "user"(id)
+            )`;
 
-        await connection.query(user);
+        await client.query(user);
         console.log("User table created successfully");
 
-        await connection.query(userNotificationInfo);
+        await client.query(userNotificationInfo);
         console.log("UserNotificationInfo table created successfully");
 
-        await connection.query(notificationData);
+        await client.query(notificationData);
         console.log("NotificationData table created successfully");
 
-        connection.release();
+        await client.query('COMMIT');
+        console.log("All tables created successfully");
+
+        return { success: "Tables created successfully" };
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error(`Error: ${err}`);
-        return {err: "Error creating tables"};
+        return { err: "Error creating tables" };
+    } finally {
+        client.release();
     }
-    return {success: "Tables created successfully"};
 };
 
 export default createTables;

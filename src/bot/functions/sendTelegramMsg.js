@@ -3,9 +3,9 @@ import bot from '../bot.js';
 
 const sendMessage = async (id, message) => {
     try {
-        const connection = await db.getConnection();
-        connection.query("SELECT * FROM user WHERE id = ?", [id]);
-        const [rows] = await connection.query("SELECT * FROM userNotificationInfo;");
+        const connection = await db.connect();
+        connection.query("SELECT * FROM \"user\" WHERE id = $1", [id]);
+        const {rows: rows} = await connection.query("SELECT * FROM userNotificationInfo;");
 
         if (rows.length === 0) {
             return { err: "User not found" };

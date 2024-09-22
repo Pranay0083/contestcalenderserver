@@ -20,8 +20,8 @@ bot.onText(/\/register/, (msg) => {
         bot.once('message', async (msg) => {
             const email = msg.text;
             if (emailRegex.test(email)) {
-                bot.sendMessage(chatId, "Thank you! Your email has been registered.");
                 const status = await addUserToDb(chatId, email);
+                console.log(status);
                 if(status.err) {
                     bot.sendMessage(chatId, "Error registering email. Please try again.");
                     takeMail();

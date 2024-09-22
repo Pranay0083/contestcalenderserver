@@ -1,19 +1,20 @@
-import db from '../../db/index.js';
+import pool from '../../db/index.js';
 import bcrypt from 'bcrypt';
 
-export default ({
+export default {
     method: 'post',
     url: '/signin',
     func: async (req, res) => {
         if (req.body.mail && req.body.password) {
+            const client = await pool.connect();
             try {
-                const connection = await db.getConnection();
-                const [rows] = await connection.query(
-                    `SELECT * FROM user WHERE mail = ?`,
+                const result = await client.query(
+                    'SELECT * FROM "user" WHERE mail = $1',
                     [req.body.mail]
                 );
-                if (rows.length > 0) {
-                    const user = rows[0];
+                
+                if (result.rows.length > 0) {
+                    const user = result.rows[0];
                     const match = await bcrypt.compare(req.body.password, user.password);
                     if (match) {
                         res.send({success: "User logged in successfully", token: user.id});
@@ -23,13 +24,14 @@ export default ({
                 } else {
                     res.send({err: "Invalid credentials"});
                 }
-                connection.release();
             } catch (err) {
                 console.error(`Error logging in user: ${err}`);
                 res.send({err: "Error logging in user"});
+            } finally {
+                client.release();
             }
         } else {
             res.send({err: "Missing required fields"});
         }
     }
-})
+};
